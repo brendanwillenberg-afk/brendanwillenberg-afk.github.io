@@ -1789,11 +1789,8 @@
   }
 
   /* ── MOBILE ── */
-  @media (max-width: 768px) {
-
-    :root { --nav-h: 80px; }
-
-    /* Landing page cycling videos — letterbox on portrait rather than extreme crop */
+  /* Portrait mobile only — letterbox videos instead of cropping */
+  @media (max-width: 768px) and (orientation: portrait) {
     .cycle-video {
       width: 100%;
       height: auto;
@@ -1803,14 +1800,17 @@
       left: 50%;
       transform: translate(-50%, -50%);
     }
-
-    /* Same fix for campaign slide background videos */
     .video-bg video {
       width: 100%;
       height: auto;
       min-width: 0;
       min-height: 0;
     }
+  }
+
+  @media (max-width: 768px) {
+
+    :root { --nav-h: 80px; }
 
     /* Nav */
     nav {
