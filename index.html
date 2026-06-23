@@ -1893,9 +1893,73 @@
     .layout5-image-strip { grid-template-columns: 1fr; }
 
   }
+
+  /* ── ROTATE OVERLAY ── */
+  #rotate-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 99999;
+    background: #0a0a0a;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 24px;
+    pointer-events: all;
+  }
+  #rotate-overlay.visible { display: flex; }
+  #rotate-overlay svg {
+    width: 48px;
+    height: 48px;
+    fill: none;
+    stroke: #fff;
+    stroke-width: 1.5;
+    animation: rotate-hint 2s ease-in-out infinite;
+  }
+  @keyframes rotate-hint {
+    0%, 100% { transform: rotate(0deg); }
+    40%       { transform: rotate(-90deg); }
+    60%       { transform: rotate(-90deg); }
+  }
+  #rotate-overlay p {
+    font-family: inherit;
+    color: rgba(255,255,255,0.6);
+    font-size: 13px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    text-align: center;
+  }
 </style>
 </head>
 <body>
+
+<!-- ROTATE OVERLAY (portrait mobile only) -->
+<div id="rotate-overlay">
+  <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+    <rect x="5" y="2" width="14" height="20" rx="2"/>
+    <path d="M9 21h6" stroke-linecap="round"/>
+  </svg>
+  <p>Best viewed in landscape</p>
+</div>
+<script>
+  (function() {
+    var overlay = document.getElementById('rotate-overlay');
+    function checkOrientation() {
+      var isMobile = window.innerWidth <= 768 || window.innerHeight <= 768;
+      var isPortrait = window.innerHeight > window.innerWidth;
+      if (isMobile && isPortrait) {
+        overlay.classList.add('visible');
+      } else {
+        overlay.classList.remove('visible');
+      }
+    }
+    checkOrientation();
+    window.addEventListener('resize', checkOrientation);
+    window.addEventListener('orientationchange', function() {
+      setTimeout(checkOrientation, 100);
+    });
+  })();
+</script>
 
 <!-- NAV -->
 <nav>
@@ -3444,6 +3508,22 @@
   const cycleVids = document.querySelectorAll('.cycle-video');
   let cvIdx = 0;
   let cycleTimer = null;
+  let preSeedTimer = null;
+
+  function getNextIdx(idx) { return (idx + 1) % cycleVids.length; }
+
+  function preSeedNext(currentIdx, afterMs) {
+    // Seek the next video to its start point ahead of time so it's frame-ready
+    if (preSeedTimer) clearTimeout(preSeedTimer);
+    preSeedTimer = setTimeout(() => {
+      const nextVid = cycleVids[getNextIdx(currentIdx)];
+      const nextStart = parseFloat(nextVid.dataset.start || 0);
+      // Only seek if not already near the right position (avoids interrupting same-file clips)
+      if (Math.abs(nextVid.currentTime - nextStart) > 0.3) {
+        nextVid.currentTime = nextStart;
+      }
+    }, Math.max(0, afterMs - 1200)); // pre-seed 1.2s before the cut
+  }
 
   function cyclePlayVid(vid) {
     const start    = parseFloat(vid.dataset.start || 0);
@@ -3466,6 +3546,7 @@
         vid.classList.add('active');
       }
       vid.play().catch(() => {});
+      preSeedNext(cvIdx, duration);
       cycleTimer = setTimeout(cycleNext, duration);
     };
 
@@ -3480,7 +3561,7 @@
   }
 
   function cycleNext() {
-    const nextIdx = (cvIdx + 1) % cycleVids.length;
+    const nextIdx = getNextIdx(cvIdx);
     const nextVid = cycleVids[nextIdx];
     // If the incoming clip is a hard cut, also remove the outgoing clip instantly
     if (nextVid.dataset.hardCut) {
@@ -3496,6 +3577,9 @@
   }
 
   if (cycleVids.length) {
+    // Pre-seed the second video immediately so the first transition is instant
+    const firstStart = parseFloat(cycleVids[1]?.dataset.start || 0);
+    if (cycleVids[1]) cycleVids[1].currentTime = firstStart;
     cyclePlayVid(cycleVids[0]);
   }
 
