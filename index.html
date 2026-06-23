@@ -1375,7 +1375,7 @@
     min-width: 100%; min-height: 100%;
     width: auto; height: auto;
     opacity: 0;
-    transition: opacity 2.5s ease;
+    transition: opacity 1.2s ease;
     pointer-events: none;
   }
   .cycle-video.active { opacity: 1; }
@@ -3508,21 +3508,16 @@
   const cycleVids = document.querySelectorAll('.cycle-video');
   let cvIdx = 0;
   let cycleTimer = null;
-  let preSeedTimer = null;
+  const XFADE = 1200; // ms — must match CSS transition duration
 
   function getNextIdx(idx) { return (idx + 1) % cycleVids.length; }
 
-  function preSeedNext(currentIdx, afterMs) {
-    // Seek the next video to its start point ahead of time so it's frame-ready
-    if (preSeedTimer) clearTimeout(preSeedTimer);
-    preSeedTimer = setTimeout(() => {
-      const nextVid = cycleVids[getNextIdx(currentIdx)];
-      const nextStart = parseFloat(nextVid.dataset.start || 0);
-      // Only seek if not already near the right position (avoids interrupting same-file clips)
-      if (Math.abs(nextVid.currentTime - nextStart) > 0.3) {
-        nextVid.currentTime = nextStart;
-      }
-    }, Math.max(0, afterMs - 1200)); // pre-seed 1.2s before the cut
+  // Seek a video to its start position without interrupting a playing clip
+  function seedVid(vid) {
+    const start = parseFloat(vid.dataset.start || 0);
+    if (Math.abs(vid.currentTime - start) > 0.5) {
+      vid.currentTime = start;
+    }
   }
 
   function cyclePlayVid(vid) {
@@ -3546,8 +3541,8 @@
         vid.classList.add('active');
       }
       vid.play().catch(() => {});
-      preSeedNext(cvIdx, duration);
-      cycleTimer = setTimeout(cycleNext, duration);
+      // Fire cycleNext early so crossfade overlaps with end of current clip
+      cycleTimer = setTimeout(cycleNext, Math.max(500, duration - XFADE));
     };
 
     vid.currentTime = start;
@@ -3563,7 +3558,11 @@
   function cycleNext() {
     const nextIdx = getNextIdx(cvIdx);
     const nextVid = cycleVids[nextIdx];
-    // If the incoming clip is a hard cut, also remove the outgoing clip instantly
+
+    // Pre-seed the video after next so it's ready two cuts from now
+    seedVid(cycleVids[getNextIdx(nextIdx)]);
+
+    // Transition out current clip
     if (nextVid.dataset.hardCut) {
       cycleVids[cvIdx].style.transition = 'none';
       cycleVids[cvIdx].classList.remove('active');
@@ -3577,9 +3576,8 @@
   }
 
   if (cycleVids.length) {
-    // Pre-seed the second video immediately so the first transition is instant
-    const firstStart = parseFloat(cycleVids[1]?.dataset.start || 0);
-    if (cycleVids[1]) cycleVids[1].currentTime = firstStart;
+    // Pre-seed ALL videos to their start positions in parallel at load
+    cycleVids.forEach(vid => seedVid(vid));
     cyclePlayVid(cycleVids[0]);
   }
 
