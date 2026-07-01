@@ -1988,7 +1988,7 @@
     <!-- 00 LANDING -->
     <div class="campaign" id="landingPage" data-video="Kia Tasman - Tradies.mp4">
       <div class="video-bg" style="background:#000">
-        <video class="cycle-video active" muted playsinline preload="auto" data-start="2" data-end="5"><source src="Kia Tasman - Tradies.mp4" type="video/mp4"></video>
+        <video class="cycle-video" muted playsinline preload="auto" data-start="2" data-end="5"><source src="Kia Tasman - Tradies.mp4" type="video/mp4"></video>
         <video class="cycle-video" muted playsinline preload="auto" data-start="24" data-end="28.2"><source src="Rexona - Pitvertising Case Study.mp4" type="video/mp4"></video>
         <video class="cycle-video" muted playsinline preload="auto" data-start="6" data-end="11"><source src="V Energy - Vikings TVC.mp4" type="video/mp4"></video>
         <video class="cycle-video" muted playsinline preload="auto" data-start="23" data-end="27.25"><source src="Carnival - Jimmy.mp4" type="video/mp4"></video>
@@ -3520,7 +3520,7 @@
     }
   }
 
-  function cyclePlayVid(vid) {
+  function cyclePlayVid(vid, instant) {
     const start    = parseFloat(vid.dataset.start || 0);
     const end      = parseFloat(vid.dataset.end   || 0);
     const duration = end > start ? (end - start) * 1000 : 6000;
@@ -3532,7 +3532,8 @@
     const onReady = () => {
       if (fired) return;
       fired = true;
-      if (hardCut) {
+      if (hardCut || instant) {
+        // No fade — appear instantly
         vid.style.transition = 'none';
         vid.classList.add('active');
         void vid.offsetWidth;
@@ -3576,11 +3577,50 @@
   }
 
   if (cycleVids.length) {
-    // Pre-seed ALL videos to their start positions in parallel at load
-    cycleVids.forEach(vid => seedVid(vid));
-    cyclePlayVid(cycleVids[0]);
+    // Pre-seed all except the first (it's handled instantly by cyclePlayVid below)
+    cycleVids.forEach((vid, i) => { if (i > 0) seedVid(vid); });
+    cyclePlayVid(cycleVids[0], true); // instant = no fade-in on first clip
   }
 
+  // ── LAZY-LOAD CAMPAIGN SLIDE VIDEOS ──
+  // All slides start with src stripped — only the visible slide loads & plays.
+  (function() {
+    const campaignSlides = document.querySelectorAll('.campaign:not(#landingPage)');
+
+    // Strip src from every slide video so they don't all preload at once
+    campaignSlides.forEach(slide => {
+      const vid = slide.querySelector('.video-bg video');
+      if (!vid) return;
+      vid.querySelectorAll('source').forEach(s => {
+        s.dataset.src = s.getAttribute('src');
+        s.removeAttribute('src');
+      });
+      vid.setAttribute('preload', 'none');
+      vid.load(); // reset so the browser releases the request
+    });
+
+    const slideObserver = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        const vid = entry.target.querySelector('.video-bg video');
+        if (!vid) return;
+        if (entry.isIntersecting) {
+          // Restore src if not already loaded
+          vid.querySelectorAll('source').forEach(s => {
+            if (s.dataset.src && !s.getAttribute('src')) {
+              s.setAttribute('src', s.dataset.src);
+            }
+          });
+          vid.setAttribute('preload', 'auto');
+          vid.load(); // triggers loadedmetadata (which fires the timecode seek handlers)
+          vid.play().catch(() => {});
+        } else {
+          vid.pause();
+        }
+      });
+    }, { threshold: 0.25 });
+
+    campaignSlides.forEach(slide => slideObserver.observe(slide));
+  })();
 
 </script>
 
