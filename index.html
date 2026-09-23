@@ -3399,10 +3399,15 @@
     const infoBtn = slide.querySelector('.inline-info-btn');
     const tooltip = slide.querySelector('.inline-tooltip');
 
-    infoBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      tooltip.classList.toggle('open');
-    });
+    // Some slides (no-copy TVCs like Kia Centaurs) have no info button or
+    // tooltip at all — guard these so that case doesn't throw and abort the
+    // rest of this script (which is what was breaking the hero reel).
+    if (infoBtn && tooltip) {
+      infoBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        tooltip.classList.toggle('open');
+      });
+    }
 
     // Close on click anywhere else
     document.addEventListener('click', (e) => {
@@ -3416,7 +3421,7 @@
       const allSlides = document.querySelectorAll('.campaign');
       if (allSlides[i] !== slide) {
         if (!vid.muted) resetPlayback();
-        tooltip.classList.remove('open');
+        if (tooltip) tooltip.classList.remove('open');
       }
     });
   });
