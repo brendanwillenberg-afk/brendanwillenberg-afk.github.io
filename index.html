@@ -2407,6 +2407,31 @@
       </div>
     </div>
 
+    <!-- Kia Centaurs -->
+    <div class="campaign" data-hide-nav="true" data-client="KIA" data-title="Kia Centaurs"
+      data-desc="" data-awards="" data-video="a_new_breed_of_hybrid_60_under_25MB.mp4">
+      <div class="video-bg"><video autoplay muted loop playsinline preload="auto"><source src="a_new_breed_of_hybrid_60_under_25MB.mp4" type="video/mp4"></video></div>
+      <div class="campaign-overlay"></div>
+      <div class="campaign-title-wrap">
+        <div class="campaign-logo-stack">
+          <img src="KIA_logo_white.png" class="campaign-client-logo" alt="KIA">
+          <h2 class="campaign-name">A New Breed of Hybrid</h2>
+        </div>
+      </div>
+      <div class="inline-sound-hint">
+        <span class="inline-sound-icon">&#9654;</span> Tap to play with sound
+      </div>
+      <div class="inline-progress">
+        <div class="inline-progress-bar"></div>
+      </div>
+      <div class="bottom-bar">
+        <span class="slide-counter">26 / 26</span>
+        <div class="slide-meta">
+          <div class="slide-client">KIA</div>
+        </div>
+      </div>
+    </div>
+
     <!-- Other Bits and Bobs -->
     <div class="campaign" data-layout="5" data-client="" data-title="Other Bits and Bobs"
       data-desc="Not every great idea gets its own chapter. Here are some other bits of work I'm quietly proud of."
@@ -3639,14 +3664,23 @@
         const vid = entry.target.querySelector('.video-bg video');
         if (!vid) return;
         if (entry.isIntersecting) {
-          // Restore src if not already loaded
+          // Restore src only the first time — calling load() again on a video
+          // that's already loading (or loaded) aborts its in-flight fetch and
+          // restarts it from scratch. Since IntersectionObserver can fire
+          // isIntersecting:true more than once for the same slide (e.g. while
+          // a scroll-snap transition settles), an unconditional load() here
+          // was exactly why a clip would start downloading and then stall.
+          let needsLoad = false;
           vid.querySelectorAll('source').forEach(s => {
             if (s.dataset.src && !s.getAttribute('src')) {
               s.setAttribute('src', s.dataset.src);
+              needsLoad = true;
             }
           });
-          vid.setAttribute('preload', 'auto');
-          vid.load(); // triggers loadedmetadata (which fires the timecode seek handlers)
+          if (needsLoad) {
+            vid.setAttribute('preload', 'auto');
+            vid.load(); // triggers loadedmetadata (which fires the timecode seek handlers)
+          }
           vid.play().catch(() => {});
         } else {
           vid.pause();
