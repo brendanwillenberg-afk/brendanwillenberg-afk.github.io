@@ -2057,6 +2057,31 @@
       </div>
     </div>
 
+    <!-- Kia Centaurs -->
+    <div class="campaign" data-hide-nav="true" data-client="KIA" data-title="Kia Centaurs"
+      data-desc="" data-awards="" data-video="a_new_breed_of_hybrid_60_under_25MB.mp4">
+      <div class="video-bg"><video autoplay muted loop playsinline preload="auto"><source src="a_new_breed_of_hybrid_60_under_25MB.mp4" type="video/mp4"></video></div>
+      <div class="campaign-overlay"></div>
+      <div class="campaign-title-wrap">
+        <div class="campaign-logo-stack">
+          <img src="KIA_logo_white.png" class="campaign-client-logo" alt="KIA">
+          <h2 class="campaign-name">A New Breed of Hybrid</h2>
+        </div>
+      </div>
+      <div class="inline-sound-hint">
+        <span class="inline-sound-icon">&#9654;</span> Tap to play with sound
+      </div>
+      <div class="inline-progress">
+        <div class="inline-progress-bar"></div>
+      </div>
+      <div class="bottom-bar">
+        <span class="slide-counter">03 / 18</span>
+        <div class="slide-meta">
+          <div class="slide-client">KIA</div>
+        </div>
+      </div>
+    </div>
+
 
     <!-- 04 Rexona Pitvertising -->
     <div class="campaign" data-layout="3" data-client="Rexona" data-title="Pitvertising"
@@ -2401,31 +2426,6 @@
       </div>
       <div class="bottom-bar">
         <span class="slide-counter">25 / 25</span>
-        <div class="slide-meta">
-          <div class="slide-client">KIA</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Kia Centaurs -->
-    <div class="campaign" data-hide-nav="true" data-client="KIA" data-title="Kia Centaurs"
-      data-desc="" data-awards="" data-video="a_new_breed_of_hybrid_60_under_25MB.mp4">
-      <div class="video-bg"><video autoplay muted loop playsinline preload="auto"><source src="a_new_breed_of_hybrid_60_under_25MB.mp4" type="video/mp4"></video></div>
-      <div class="campaign-overlay"></div>
-      <div class="campaign-title-wrap">
-        <div class="campaign-logo-stack">
-          <img src="KIA_logo_white.png" class="campaign-client-logo" alt="KIA">
-          <h2 class="campaign-name">A New Breed of Hybrid</h2>
-        </div>
-      </div>
-      <div class="inline-sound-hint">
-        <span class="inline-sound-icon">&#9654;</span> Tap to play with sound
-      </div>
-      <div class="inline-progress">
-        <div class="inline-progress-bar"></div>
-      </div>
-      <div class="bottom-bar">
-        <span class="slide-counter">26 / 26</span>
         <div class="slide-meta">
           <div class="slide-client">KIA</div>
         </div>
@@ -3629,11 +3629,21 @@
   // can make that slide's own video stall while it tries to load.
   const landingEl = document.getElementById('landingPage');
   if (landingEl && cycleVids.length) {
+    // IntersectionObserver fires once immediately on observe() with
+    // whatever it currently measures — and on a fresh page load, that can
+    // come back isIntersecting:false before layout has actually settled
+    // (the landing page IS visible; the browser just hasn't confirmed it
+    // yet). Acting on that spurious first "false" pauses the reel before
+    // it ever gets going, and since nothing ever un-pauses it, it stays
+    // frozen. So the pause branch is ignored on callback #1 — only a
+    // genuine later transition (an actual scroll-away) can pause it.
+    let landingCallbackCount = 0;
     const landingObserver = new IntersectionObserver((entries) => {
       entries.forEach((entry) => {
+        landingCallbackCount++;
         if (entry.isIntersecting) {
           if (!cycleTimer) cyclePlayVid(cycleVids[cvIdx], true);
-        } else {
+        } else if (landingCallbackCount > 1) {
           if (cycleTimer) { clearTimeout(cycleTimer); cycleTimer = null; }
           cycleVids.forEach((v) => v.pause());
         }
