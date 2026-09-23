@@ -3597,6 +3597,26 @@
     cyclePlayVid(cycleVids[0], true); // instant = no fade-in on first clip
   }
 
+  // ── Pause the hero reel once you've scrolled away from the landing page ──
+  // Without this, cycleNext() keeps firing forever in the background, still
+  // fetching whichever hero clip is two cuts away — which competes for
+  // bandwidth with whatever video the visitor has actually scrolled to and
+  // can make that slide's own video stall while it tries to load.
+  const landingEl = document.getElementById('landingPage');
+  if (landingEl && cycleVids.length) {
+    const landingObserver = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          if (!cycleTimer) cyclePlayVid(cycleVids[cvIdx], true);
+        } else {
+          if (cycleTimer) { clearTimeout(cycleTimer); cycleTimer = null; }
+          cycleVids.forEach((v) => v.pause());
+        }
+      });
+    }, { threshold: 0 });
+    landingObserver.observe(landingEl);
+  }
+
   // ── LAZY-LOAD CAMPAIGN SLIDE VIDEOS ──
   // All slides start with src stripped — only the visible slide loads & plays.
   (function() {
